@@ -1,8 +1,7 @@
 import folium
-import json
 
-from django.http import HttpResponseNotFound
-from django.shortcuts import render
+from django.utils.timezone import localtime
+from django.shortcuts import get_object_or_404, render
 
 from .models import Pokemon, PokemonEntity
 
@@ -35,7 +34,13 @@ def show_all_pokemons(request):
         tiles='CartoDB positron',
     )
 
+    now = localtime()
     for pokemon_entity in PokemonEntity.objects.all():
+        if pokemon_entity.appeared_at and pokemon_entity.appeared_at > now:
+            continue
+        if pokemon_entity.disappeared_at and pokemon_entity.disappeared_at < now:
+            continue
+
         pokemon = pokemon_entity.pokemon
         if pokemon.image:
             image_url = request.build_absolute_uri(pokemon.image.url)
@@ -63,24 +68,60 @@ def show_all_pokemons(request):
 
 
 def show_pokemon(request, pokemon_id):
-    with open('pokemon_entities/pokemons.json', encoding='utf-8') as database:
-        pokemons = json.load(database)['pokemons']
+    pokemon = get_object_or_404(Pokemon, id=pokemon_id)
 
-    for pokemon in pokemons:
-        if pokemon['pokemon_id'] == int(pokemon_id):
-            requested_pokemon = pokemon
-            break
-    else:
-        return HttpResponseNotFound('<h1>Такой покемон не найден</h1>')
+    now = localtime()
 
-    folium_map = folium.Map(location=MOSCOW_CENTER, zoom_start=12)
-    for pokemon_entity in requested_pokemon['entities']:
+    folium_map = folium.Map(
+        location=MOSCOW_CENTER,
+        zoom_start=12,
+        tiles='CartoDB positron',
+    )
+
+    entities = []
+    for pokemon_entity in pokemon.pokemonentity_set.all():
+        if pokemon_entity.appeared_at and pokemon_entity.appeared_at > now:
+            continue
+        if pokemon_entity.disappeared_at and pokemon_entity.disappeared_at < now:
+            continue
+
+        if pokemon.image:
+            image_url = request.build_absolute_uri(pokemon.image.url)
+        else:
+            image_url = DEFAULT_IMAGE_URL
+
         add_pokemon(
-            folium_map, pokemon_entity['lat'],
-            pokemon_entity['lon'],
-            pokemon['img_url']
+            folium_map,
+            pokemon_entity.lat,
+            pokemon_entity.lon,
+            image_url,
         )
 
+        entities.append({
+            'lat': pokemon_entity.lat,
+            'lon': pokemon_entity.lon,
+            'level': pokemon_entity.level,
+            'health': pokemon_entity.health,
+            'strength': pokemon_entity.strength,
+            'defense': pokemon_entity.defense,
+            'stamina': pokemon_entity.stamina,
+            'appeared_at': pokemon_entity.appeared_at,
+            'disappeared_at': pokemon_entity.disappeared_at,
+        })
+
+    if pokemon.image:
+        img_url = request.build_absolute_uri(pokemon.image.url)
+    else:
+        img_url = DEFAULT_IMAGE_URL
+
+    pokemon_on_page = {
+        'pokemon_id': pokemon.id,
+        'title_ru': pokemon.title,
+        'img_url': img_url,
+        'entities': entities,
+    }
+
     return render(request, 'pokemon.html', context={
-        'map': folium_map._repr_html_(), 'pokemon': pokemon
+        'map': folium_map._repr_html_(),
+        'pokemon': pokemon_on_page,
     })
