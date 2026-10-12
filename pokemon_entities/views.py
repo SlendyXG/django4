@@ -123,6 +123,15 @@ def show_pokemon(request, pokemon_id):
             'img_url': request.build_absolute_uri(prev.image.url) if prev.image else DEFAULT_IMAGE_URL,
         }
 
+    next_evolution = None
+    next_pokemon = pokemon.next_evolutions.first()
+    if next_pokemon:
+        next_evolution = {
+            'pokemon_id': next_pokemon.id,
+            'title_ru': next_pokemon.title,
+            'img_url': request.build_absolute_uri(next_pokemon.image.url) if next_pokemon.image else DEFAULT_IMAGE_URL,
+        }
+
     pokemon_on_page = {
         'pokemon_id': pokemon.id,
         'title_ru': pokemon.title,
@@ -131,6 +140,7 @@ def show_pokemon(request, pokemon_id):
         'img_url': img_url,
         'description': pokemon.description,
         'previous_evolution': previous_evolution,
+        'next_evolution': next_evolution,
         'entities': entities,
     }
 
