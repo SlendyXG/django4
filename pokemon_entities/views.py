@@ -33,12 +33,11 @@ def show_all_pokemons(request):
     )
 
     now = localtime()
-    for pokemon_entity in PokemonEntity.objects.all():
-        if pokemon_entity.appeared_at > now:
-            continue
-        if pokemon_entity.disappeared_at < now:
-            continue
-
+    active_entities = PokemonEntity.objects.filter(
+        appeared_at__lte=now,
+        disappeared_at__gte=now,
+    )
+    for pokemon_entity in active_entities:
         pokemon = pokemon_entity.pokemon
         if pokemon.image:
             image_url = request.build_absolute_uri(pokemon.image.url)
@@ -77,12 +76,11 @@ def show_pokemon(request, pokemon_id):
     )
 
     entities = []
-    for pokemon_entity in pokemon.entities.all():
-        if pokemon_entity.appeared_at > now:
-            continue
-        if pokemon_entity.disappeared_at < now:
-            continue
-
+    active_entities = pokemon.entities.filter(
+        appeared_at__lte=now,
+        disappeared_at__gte=now,
+    )
+    for pokemon_entity in active_entities:
         if pokemon.image:
             image_url = request.build_absolute_uri(pokemon.image.url)
         else:
