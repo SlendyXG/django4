@@ -1,7 +1,7 @@
 import folium
 
-from django.utils.timezone import localtime
 from django.shortcuts import get_object_or_404, render
+from django.utils.timezone import localtime
 
 from .models import Pokemon, PokemonEntity
 
@@ -21,8 +21,6 @@ def add_pokemon(folium_map, lat, lon, image_url=DEFAULT_IMAGE_URL):
     )
     folium.Marker(
         [lat, lon],
-        # Warning! `tooltip` attribute is disabled intentionally
-        # to fix strange folium cyrillic encoding bug
         icon=icon,
     ).add_to(folium_map)
 
@@ -36,9 +34,9 @@ def show_all_pokemons(request):
 
     now = localtime()
     for pokemon_entity in PokemonEntity.objects.all():
-        if pokemon_entity.appeared_at and pokemon_entity.appeared_at > now:
+        if pokemon_entity.appeared_at > now:
             continue
-        if pokemon_entity.disappeared_at and pokemon_entity.disappeared_at < now:
+        if pokemon_entity.disappeared_at < now:
             continue
 
         pokemon = pokemon_entity.pokemon
@@ -79,10 +77,10 @@ def show_pokemon(request, pokemon_id):
     )
 
     entities = []
-    for pokemon_entity in pokemon.pokemonentity_set.all():
-        if pokemon_entity.appeared_at and pokemon_entity.appeared_at > now:
+    for pokemon_entity in pokemon.entities.all():
+        if pokemon_entity.appeared_at > now:
             continue
-        if pokemon_entity.disappeared_at and pokemon_entity.disappeared_at < now:
+        if pokemon_entity.disappeared_at < now:
             continue
 
         if pokemon.image:
